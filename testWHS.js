@@ -16,12 +16,12 @@ function photoByNumber() {
 
 	var num = document.getElementById("num").value;
 	num = num.trim();
-	var photoNum = Number(num);
-	if (photoNum != NaN) {
-		var photoURL = photoURLArray[photoNum].url;
-		var display = document.getElementById("photoImg");
-		display.src = photoURL;
-	    }
+	// var photoNum = Number(num);
+	// if (photoNum != NaN) {
+	// 	var photoURL = photoURLArray[photoNum].url; //this needs to call lotus from the file name we get from the query num
+	// 	var display = document.getElementById("photoImg");
+	// 	display.src = photoURL;
+	//     }
 
 
 	var oReq = new XMLHttpRequest(); // sending an AJAX request requires an object, so this makes an AJAX request object
@@ -35,9 +35,10 @@ function photoByNumber() {
 }
 
 function reqListener(){
-	var photoURL = this.responseText; // method of the oReq so "this" is oReq
+	var photoURL = this.responseText; // method of the oReq so "this" is oReq //this.responseText is the body of the response -- just the file name right now
+	var lotusURL = "http://lotus.idav.ucdavis.edu/public/ecs162/UNESCO/" + photoURL;
 	var display = document.getElementById("photoImg");
-	display.src = photoURL;
+	display.src = lotusURL;
 }
 
 

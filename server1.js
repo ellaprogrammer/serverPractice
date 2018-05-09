@@ -45,28 +45,30 @@ function handler (request, response) {
     	//if there is a query & FIXME a number in the url, print the name of the photo that corresponds to the photo id:
     	var queryB = url.split("/")[1];
     	console.log(queryB);
+
     	if (queryB.split("?")[0] == "query"){
     		var numID = queryB.split("num=")[1];
     		console.log(numID); //this works
     		console.log(imgList[numID]);
-    		if (numID > "989"){ //this doesn't work yet
-    			response.writeHead(404, {"Content-type": "text/html"});
-		        response.write("<p> 404 Picture ID out of range. </p>");
-		        response.end();
-    		}
-    		else {
+
+    		// if (numID > "989"){ //this doesn't work yet
+    		// 	response.writeHead(404, {"Content-type": "text/html"});
+		    //     response.write("<p> 404 Picture ID out of range. </p>");
+		    //     response.end();
+    		// }
+    		//else {
     			response.writeHead(200, {"Content-Type": "text/html"});
-	    		response.write("<h1>"+imgList[numID]+"</h1>");
+	    		response.write(imgList[numID]);
 	    		response.end();
-    		}
+    		//}
     	} 
 
     	//FIXME: check for incorrect url:
-    	else if(url.split("/")[1] !='testWHS.html'){  //this will happen if they write something other than testWHS.html
-	        response.writeHead(404, {"Content-type": "text/html"});
-	        response.write("<p> 404 Not Found. </p>");
-	        response.end();
-	    }
+    	// else if(url.split("/")[1] !='testWHS.html'){  //this will happen if they write something other than testWHS.html
+	    //     response.writeHead(404, {"Content-type": "text/html"});
+	    //     response.write("<p> 404 Not Found. </p>");
+	    //     response.end();
+	    // }
 
     	//else, load testWHS.html 
     	else{
@@ -74,7 +76,7 @@ function handler (request, response) {
     	}
     	//fileServer.serveFile('/error.html', 500, {}, request, response); ?
     	//console.log(request.url); //url property of the rquest object (string)
-        fileServer.serve(request, response);
+        
     }).resume();
 }
 
