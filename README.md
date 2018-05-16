@@ -1,2 +1,2 @@
-# serverPractice
-learning the flow of communication - server, browser, database
+Ella Queen
+Charline Delkhah
