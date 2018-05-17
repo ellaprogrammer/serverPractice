@@ -1,103 +1,90 @@
-// For or each filename in the list, adds a row to the database, with a unique ID number, the filename, 
-//the width, the height, and two empty strings for the landmark and tags fields
-
+var url = require('url');
 var http = require('http');
-var fs = require('fs');
 var sizeOf = require('image-size');
 var sqlite3 = require("sqlite3").verbose();
-var url = require('url');
+var fs = require("fs");
 
 var dbFileName = "PhotoQ.db";
 var db = new sqlite3.Database(dbFileName);
+
+// prevent denial-of-service attacks against the TA's lab machine!
 http.globalAgent.maxSockets = 1;
-var cmdStr = ' INSERT OR REPLACE INTO photoTags VALUES ( _IND, "_FILENAME", _WIDTH, _HEIGHT , "", "") ';
-var cbCount = 0;
-//fixed_url = encodeURIComponent(url); //run on full URL before make query
 
-function loadImgList () {
-    var data = fs.readFileSync('6whs.json');
-    if (! data) {
-	    console.log("cannot read 6whs.json");
-    } else {
-	    listObj = JSON.parse(data);
-	    urlList = listObj.photoURLs;
-	    return urlList;
-    }
-}
+function getImageDims( index, name, callback ) {
 
-// Get size of one image, then call cbFun
-function getSize(ind, name, cbFun) {
-    var imgURL = imgServerURL+name;
-    var options = url.parse(imgURL);
+    //console.log("Original name is: "+ name);
+    /* encodeURIComponent escapes characters that are in the filename but invalid in a URL */
+    //var nameFixed = encodeURIComponent(name);
+    //console.log("Name set to: "+ nameFixed);
+    var imgUrl = 'http://lotus.idav.ucdavis.edu/public/ecs162/UNESCO/' + name;
+    var options = url.parse(name); //CHANGED FROM imgUrl
 
-    // call http get 
     http.get(options, function (response) {
-	var chunks = [];
-	response.on('data', function (chunk) {
-	    chunks.push(chunk);
-	}).on('end', function() {
-	    var buffer = Buffer.concat(chunks);
-	    dimensions = sizeOf(buffer);
-	    cbFun(ind, name, dimensions.width, dimensions.height);
-	})
-    })
-}
+        var chunks = [];
+        response.on('data', function (chunk) {
+            chunks.push(chunk);
+        }).on('end', function() {
+            var buffer = Buffer.concat(chunks);
 
-function saveImgDims(){
+            console.log(sizeOf(buffer));
 
-
+            // once we have the data we need, call the callback to continue the work...
+            callback(index, name, sizeOf(buffer));
+        });
+    });
 
 }
 
-function createImgList(){
-	var tempArr = [];
-	var urlList = loadImgList();
-
-	//add row to the database, with unique ID number, filename, 
-	//width, height, and two empty strings for the landmark and tags fields
-	for(let i=0; i < urlList.length;i++){
-
-		var fixed_url = encodeURIComponent(urlList[i]);
-		var cbGoal = urlList.length;
-
-		console.log("Enqueing item "+ i + urlList[i]);
-		//getImageDims(i,imgList[i],saveImgDims);
-
-		console.log(cbGoal);
-
-		/*db.run(cmdStr);
-
-		getSize(i,fixed_url, function(i=i,fixed_url,) {
-			db.run('UPDATE photoTags SET tags = "," WHERE idNum = '+ i, updateCallback);
-			function updateCallback(err){
-				if(err) console.log("update error!",err);
-				else{
-					db.get('SELECT tags FROM photoTags WHERE idNum = '+i ,dataCallback);
-				}
-			}
-		}*/
+var imglist = JSON.parse(fs.readFileSync("photoList.json")).photoURLs;
+var cmdStr = 'INSERT INTO photoTags VALUES ( _IDX, "_FILENAME", _WIDTH, _HEIGHT , "",  "")';
+var cbCount = 0;
+var cbGoal = imglist.length;
 
 
-	}
+function dumpDB() {
+  db.all ( 'SELECT * FROM photoTags', dataCallback);
+      function dataCallback( err, data ) {
+        console.log(data); 
+      }
 }
 
-createImgList();
+// Always use the callback for database operations and print out any error messages you get.
+function insertDataCallback(err) {
+    if (err) {
+        console.log("Error while saving data in DB: ",err);
+    }
 
-/*
-var url = require('url');
-var http = require('http');
- 
-var sizeOf = require('image-size');
- 
-var imgUrl = 'http://my-amazing-website.com/image.jpeg';
-var options = url.parse(imgUrl);
- 
-http.get(options, function (response) {
-  var chunks = [];
-  response.on('data', function (chunk) {
-    chunks.push(chunk);
-  }).on('end', function() {
-    var buffer = Buffer.concat(chunks);
-    console.log(sizeOf(buffer));
-  });
-});*/
+    cbCount += 1;
+    console.log("Database entries updated to: "+cbCount);
+    if (cbCount == cbGoal) {
+        console.log("All callbacks recieved");
+        console.log("Database closed");
+        db.close()
+        //dumpDB()
+    } 
+}
+
+function saveImageDims( index, name, dims ) {
+
+    //console.log("SUPRISE WE'RE IN THE CALLBACK");
+
+    var cmd = cmdStr.replace("_IDX", index)
+    cmd = cmd.replace("_FILENAME", name)
+    cmd = cmd.replace("_WIDTH", dims.width)
+    cmd = cmd.replace("_HEIGHT", dims.height)
+
+    console.log("        item ", index, " complete!");
+    //console.log("Dimensions are width: ", dims.width, " height: ", dims.height);
+
+    db.run(cmd,insertDataCallback);
+}
+
+for (var i = 0; i < imglist.length; i++) {
+    console.log("Enqueuing item ", i, "   ", imglist[i]);
+    //var imgName = imglist[i].substring(51);
+    var temp = imglist[i].replace("&%#39;", "%26%2339%3b");
+    //var temp = encodeURIComponent(imglist[i]);
+    getImageDims( i, temp, saveImageDims );
+}
+
+console.log("End of script file...");
